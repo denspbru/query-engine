@@ -4,8 +4,7 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Enumerator;
-import org.apache.calcite.linq4j.QueryProvider;
-import org.apache.calcite.linq4j.Queryable;
+import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.*;
@@ -14,7 +13,6 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.config.CalciteConnectionConfig;
 
-import java.lang.reflect.Type;
 import java.util.*;
 
 public class ArrowTable implements ScannableTable {
@@ -28,8 +26,59 @@ public class ArrowTable implements ScannableTable {
 
     @Override
     public Enumerable<Object[]> scan(DataContext root) {
-        throw new UnsupportedOperationException();
+        Enumerator<Object[]> enumerator = new Enumerator<Object[]>() {
+            private final int rowCount;
+            private int currentIndex = -1;
+
+            {
+                if (columns.isEmpty()) {
+                    rowCount = 0;
+                } else {
+                    Iterator<FieldVector> it = columns.values().iterator();
+                    rowCount = it.next().getValueCount();
+                    while (it.hasNext()) {
+                        int nextSize = it.next().getValueCount();
+                        if (nextSize != rowCount) {
+                            throw new IllegalStateException("Column size mismatch in ArrowTable");
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public Object[] current() {
+                Object[] row = new Object[columnNames.size()];
+                for (int i = 0; i < columnNames.size(); i++) {
+                    FieldVector vector = columns.get(columnNames.get(i));
+                    row[i] = currentIndex < vector.getValueCount() && !vector.isNull(currentIndex)
+                            ? vector.getObject(currentIndex)
+                            : null;
+                }
+                return row;
+            }
+
+            @Override
+            public boolean moveNext() {
+                currentIndex++;
+                return currentIndex < rowCount;
+            }
+
+            @Override
+            public void reset() {
+                currentIndex = -1;
+            }
+
+            @Override
+            public void close() {
+                // no-op
+            }
+        };
+
+        return Linq4j.asEnumerable(enumerator); // ← теперь работает!
     }
+
+
+
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
