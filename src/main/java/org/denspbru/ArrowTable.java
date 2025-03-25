@@ -2,9 +2,7 @@ package org.denspbru;
 
 import org.apache.arrow.vector.FieldVector;
 import org.apache.calcite.DataContext;
-import org.apache.calcite.linq4j.Enumerable;
-import org.apache.calcite.linq4j.Enumerator;
-import org.apache.calcite.linq4j.Linq4j;
+import org.apache.calcite.linq4j.*;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.*;
@@ -74,7 +72,12 @@ public class ArrowTable implements ScannableTable {
             }
         };
 
-        return Linq4j.<Object[]>asEnumerable(enumerator); // ← теперь работает!
+        return new AbstractEnumerable<Object[]>() {
+            @Override
+            public Enumerator<Object[]> enumerator() {
+                return enumerator;
+            }
+        }; // ← теперь работает!
     }
 
 
