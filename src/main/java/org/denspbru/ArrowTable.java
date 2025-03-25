@@ -74,7 +74,7 @@ public class ArrowTable implements ScannableTable {
             }
         };
 
-        return Linq4j.asEnumerable(enumerator); // ← теперь работает!
+        return Linq4j.<Object[]>asEnumerable(enumerator); // ← теперь работает!
     }
 
 
