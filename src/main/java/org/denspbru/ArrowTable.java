@@ -2,18 +2,19 @@ package org.denspbru;
 
 import org.apache.arrow.vector.FieldVector;
 import org.apache.calcite.DataContext;
-import org.apache.calcite.linq4j.*;
+import org.apache.calcite.linq4j.AbstractEnumerable;
+import org.apache.calcite.linq4j.Enumerable;
+import org.apache.calcite.linq4j.Enumerator;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.schema.*;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.schema.Schema;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.config.CalciteConnectionConfig;
 
 import java.util.*;
 
-public class ArrowTable implements ScannableTable {
+public class ArrowTable implements ProjectableFilterableTable {
     private final Map<String, FieldVector> columns;
     private final List<String> columnNames;
 
@@ -23,34 +24,18 @@ public class ArrowTable implements ScannableTable {
     }
 
     @Override
-    public Enumerable<Object[]> scan(DataContext root) {
-        Enumerator<Object[]> enumerator = new Enumerator<Object[]>() {
-            private final int rowCount;
+    public Enumerable<Object[]> scan(DataContext root, List<RexNode> filters, int[] projects) {
+        Enumerator<Object[]> enumerator = new Enumerator<>() {
+            private final int rowCount = columns.isEmpty() ? 0 : columns.values().iterator().next().getValueCount();
             private int currentIndex = -1;
-
-            {
-                if (columns.isEmpty()) {
-                    rowCount = 0;
-                } else {
-                    Iterator<FieldVector> it = columns.values().iterator();
-                    rowCount = it.next().getValueCount();
-                    while (it.hasNext()) {
-                        int nextSize = it.next().getValueCount();
-                        if (nextSize != rowCount) {
-                            throw new IllegalStateException("Column size mismatch in ArrowTable");
-                        }
-                    }
-                }
-            }
 
             @Override
             public Object[] current() {
-                Object[] row = new Object[columnNames.size()];
-                for (int i = 0; i < columnNames.size(); i++) {
-                    FieldVector vector = columns.get(columnNames.get(i));
-                    row[i] = currentIndex < vector.getValueCount() && !vector.isNull(currentIndex)
-                            ? vector.getObject(currentIndex)
-                            : null;
+                Object[] row = new Object[projects.length];
+                for (int i = 0; i < projects.length; i++) {
+                    int colIndex = projects[i];
+                    FieldVector vector = columns.get(columnNames.get(colIndex));
+                    row[i] = vector.getObject(currentIndex);
                 }
                 return row;
             }
@@ -62,64 +47,62 @@ public class ArrowTable implements ScannableTable {
             }
 
             @Override
-            public void reset() {
-                currentIndex = -1;
-            }
-
+            public void reset() { currentIndex = -1; }
             @Override
-            public void close() {
-                // no-op
-            }
+            public void close() {}
         };
 
-        return new AbstractEnumerable<Object[]>() {
+        return new AbstractEnumerable<>() {
             @Override
             public Enumerator<Object[]> enumerator() {
                 return enumerator;
             }
-        }; // ← теперь работает!
+        };
     }
-
-
-
 
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
         RelDataTypeFactory.Builder builder = typeFactory.builder();
         for (String name : columnNames) {
-            FieldVector vec = columns.get(name);
-            SqlTypeName type;
-            switch (vec.getMinorType()) {
-                case INT: type = SqlTypeName.INTEGER; break;
-                case FLOAT8: type = SqlTypeName.DOUBLE; break;
-                case DECIMAL: type = SqlTypeName.DECIMAL; break;
-                case VARCHAR: type = SqlTypeName.VARCHAR; break;
-                case DATEDAY: type = SqlTypeName.DATE; break;
-                case TIMESTAMPMILLI: type = SqlTypeName.TIMESTAMP; break;
-                default: type = SqlTypeName.ANY;
-            }
-            builder.add(name, type);
+            FieldVector vector = columns.get(name);
+            SqlTypeName sqlType = mapArrowToSqlType(vector);
+            builder.add(name.toUpperCase(), sqlType);
         }
         return builder.build();
     }
 
+    private SqlTypeName mapArrowToSqlType(FieldVector vector) {
+        String typeName = vector.getField().getType().getTypeID().name();
+        return switch (typeName) {
+            case "Int" -> SqlTypeName.INTEGER;
+            case "Decimal" -> SqlTypeName.DECIMAL;
+            case "Utf8" -> SqlTypeName.VARCHAR;
+            case "Date" -> SqlTypeName.DATE;
+            case "Timestamp" -> SqlTypeName.TIMESTAMP;
+            default -> SqlTypeName.ANY;
+        };
+    }
+
     @Override
-    public Statistic getStatistic() {
-        return Statistics.UNKNOWN;
+    public boolean rolledUpColumnValidInsideAgg(
+            String column,
+            org.apache.calcite.sql.SqlCall call,
+            org.apache.calcite.sql.SqlNode parent,
+            org.apache.calcite.config.CalciteConnectionConfig config) {
+        return true; // разрешаем агрегации над любыми колонками
     }
 
     @Override
     public boolean isRolledUp(String column) {
-        return false;
+        return false; // у нас нет свернутых (rolled-up) колонок
     }
-
-    @Override
-    public boolean rolledUpColumnValidInsideAgg(String column, SqlCall call, SqlNode parent, CalciteConnectionConfig config) {
-        return true;
-    }
-
     @Override
     public Schema.TableType getJdbcTableType() {
         return Schema.TableType.TABLE;
     }
+    @Override
+    public org.apache.calcite.schema.Statistic getStatistic() {
+        return org.apache.calcite.schema.Statistics.UNKNOWN;
+    }
+
 }
