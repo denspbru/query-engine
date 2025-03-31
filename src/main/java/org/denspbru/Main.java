@@ -16,7 +16,7 @@ public class Main {
                 "test",
                 "test");
         Statement stmt = pgConn.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT * FROM test"); // замените на свою таблицу
+        ResultSet rs = stmt.executeQuery("SELECT * FROM sales"); // замените на свою таблицу
 
         // 2. Преобразование в Arrow-таблицу
         Map<String, FieldVector> columns = PostgresToArrow.fromResultSet(rs, new RootAllocator());
@@ -27,12 +27,27 @@ public class Main {
         Connection connection = DriverManager.getConnection("jdbc:calcite:", info);
         CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
         SchemaPlus rootSchema = calciteConnection.getRootSchema();
-        rootSchema.add("TEST", table);
+        rootSchema.add("SALES", table);
+
+
+
+        Statement stmt2 = pgConn.createStatement();
+        ResultSet rs2 = stmt2.executeQuery("SELECT * FROM product_type"); // замените на свою таблицу
+
+        // 2. Преобразование в Arrow-таблицу
+        Map<String, FieldVector> columns2 = PostgresToArrow.fromResultSet(rs2, new RootAllocator());
+        ArrowTable table2 = new ArrowTable(columns2);
+
+        // 3. Calcite schema и выполнение SQL
+        rootSchema.add("PRODUCT_TYPE", table2);
+
 
         Statement sqlStmt = connection.createStatement();
-        ResultSet resultSet = sqlStmt.executeQuery("SELECT NAME FROM TEST WHERE id > 2");
+        ResultSet resultSet = sqlStmt.executeQuery("SELECT t.product_type_name, count(*), sum(val) FROM SALES s left join PRODUCT_TYPE t on t.product_type_id = s.product_type_id  group by product_type_name");
         while (resultSet.next()) {
-            System.out.println("Name: " + resultSet.getString(1));
+            System.out.println("product_type_id: " + resultSet.getString(1));
+            System.out.println("count: " + resultSet.getString(2));
+            System.out.println("sum: " + resultSet.getString(3));
         }
 
         connection.close();
