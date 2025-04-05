@@ -28,7 +28,7 @@ public class PostgresToArrow {
                     strVector.allocateNew();
                     columns.put(name, strVector);
                     break;
-                case java.sql.Types.NUMERIC:
+                case java.sql.Types.NUMERIC, java.sql.Types.DECIMAL:
                     DecimalVector decimalVector = new DecimalVector(name, allocator, 10, 2);
                     decimalVector.allocateNew();
                     columns.put(name, decimalVector);

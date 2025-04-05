@@ -105,4 +105,7 @@ public class ArrowTable implements ProjectableFilterableTable {
         return org.apache.calcite.schema.Statistics.UNKNOWN;
     }
 
+    public List<String> getColumnNames() {
+        return columnNames;
+    }
 }

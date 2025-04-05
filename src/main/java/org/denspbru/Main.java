@@ -4,6 +4,7 @@ import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.schema.SchemaPlus;
+import java.util.List;
 
 import java.sql.*;
 import java.util.Map;
@@ -48,6 +49,24 @@ public class Main {
             System.out.println("product_type_id: " + resultSet.getString(1));
             System.out.println("count: " + resultSet.getString(2));
             System.out.println("sum: " + resultSet.getString(3));
+        }
+
+
+        Statement sqlStmtOlap = connection.createStatement();
+        ResultSet resultSetOlap = sqlStmt.executeQuery("SELECT t.product_type_name,  s.val FROM SALES s left join PRODUCT_TYPE t on t.product_type_id = s.product_type_id ");
+
+        Map<String, FieldVector> columns3 = PostgresToArrow.fromResultSet(resultSetOlap, new RootAllocator());
+        ArrowTable table3 = new ArrowTable(columns3);
+
+        Map<List<Object>, CubeBuilder.Agg> cube = CubeBuilder.buildCube(
+                table3,
+                List.of("PRODUCT_TYPE_NAME"),
+                "VAL"
+        );
+
+        // Печатаем результат
+        for (Map.Entry<List<Object>, CubeBuilder.Agg> entry : cube.entrySet()) {
+            System.out.println("Group: " + entry.getKey() + " => " + entry.getValue());
         }
 
         connection.close();
