@@ -41,7 +41,7 @@ public class JDBCServer {
         int port = 8765;
         System.out.println("Starting Avatica JDBC server on port " + port);
         try {
-            Meta meta = new MyMeta();
+            Meta meta = new MyMeta(); // твоя реализация
             LocalService service = new LocalService(meta);
             AvaticaJsonHandler handler = new AvaticaJsonHandler(service);
 
@@ -49,10 +49,11 @@ public class JDBCServer {
             ServletContextHandler context = new ServletContextHandler(server, "/");
 
             ServletHolder servletHolder = new ServletHolder();
-            servletHolder.setServlet(new AvaticaJsonHandler(service));
+            servletHolder.setServlet(handler); // ✅ правильный способ
             context.addServlet(servletHolder, "/*");
 
             server.start();
+            System.out.println("✅ JDBC сервер работает на http://localhost:" + port);
             server.join();
         } catch (Exception e) {
             e.printStackTrace();
