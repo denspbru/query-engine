@@ -46,11 +46,7 @@ public class JDBCServer {
             AvaticaJsonHandler handler = new AvaticaJsonHandler(service);
 
             Server server = new Server(port);
-            ServletContextHandler context = new ServletContextHandler(server, "/");
-
-            ServletHolder servletHolder = new ServletHolder();
-            servletHolder.setServlet(handler); // ✅ правильный способ
-            context.addServlet(servletHolder, "/*");
+            server.setHandler(handler); // 👈 напрямую устанавливаем handler вместо сервлетов
 
             server.start();
             System.out.println("✅ JDBC сервер работает на http://localhost:" + port);
