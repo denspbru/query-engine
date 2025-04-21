@@ -6,15 +6,15 @@ import org.apache.calcite.avatica.remote.LocalService;
 import org.apache.calcite.avatica.server.AvaticaJsonHandler;
 import org.apache.calcite.avatica.Meta;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import javax.servlet.Servlet;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.util.Map;
 public class JDBCServer {
+    private static final Logger logger = LoggerFactory.getLogger(JDBCServer.class);
     public static void main(String[] args) throws Exception {
         // 1. Загружаем таблицы из PostgreSQL в InMemoryStore
         Connection pgConn = DriverManager.getConnection(
@@ -22,7 +22,7 @@ public class JDBCServer {
                 "test",
                 "test"
         );
-
+        logger.info("Starting JDBC server...");
         InMemoryStore store = InMemoryStore.INSTANCE;
 
         // Загрузка таблицы sales
