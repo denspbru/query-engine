@@ -18,7 +18,7 @@ public class DuckMeta extends JdbcMeta {
     }
     @Override
     public Meta.ExecuteResult execute(Meta.StatementHandle h, List<TypedValue> parameterValues, int maxRowsInFirstFrame) throws NoSuchStatementException {
-        System.out.println("Executing SQL!!");
+        System.out.println("execute(...) (not prepared)");
         return super.execute(h, parameterValues, maxRowsInFirstFrame);
     }
 
@@ -77,7 +77,7 @@ public class DuckMeta extends JdbcMeta {
             ColumnMetaData.AvaticaType avaticaType = ColumnMetaData.scalar(
                     metaData.getColumnType(i),
                     metaData.getColumnTypeName(i),
-                    ColumnMetaData.Rep.OBJECT
+                    ColumnMetaData.Rep.OBJECT  // безопасный дефолт
             );
 
             ColumnMetaData column = new ColumnMetaData(
@@ -102,8 +102,11 @@ public class DuckMeta extends JdbcMeta {
                     false,                                      // definitelyWritable
                     metaData.getColumnClassName(i)              // columnClassName
             );
+
+            columns.add(column);  // ✅ ← это ты забыл
         }
         return columns;
     }
+
 
 }
