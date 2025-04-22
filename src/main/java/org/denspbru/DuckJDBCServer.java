@@ -14,8 +14,6 @@ import java.sql.Connection;
 public class DuckJDBCServer {
 
     public static void main(String[] args) throws Exception {
-        // Подключение к DuckDB
-        Connection connection = DriverManager.getConnection("jdbc:duckdb:");
 
         // Meta → JdbcMeta (наследует org.apache.calcite.avatica.Meta)
         DuckMeta meta = new DuckMeta();
