@@ -13,19 +13,17 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-bom</artifactId>
-                <version>9.4.52.v20230823</version>
+                <version>9.4.44.v20210927</version> <!-- ✅ строго эта версия -->
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
-
     <dependencies>
         <!-- Apache Arrow -->
         <dependency>
@@ -41,30 +39,21 @@
         <!-- Apache Calcite -->
         <dependency>
             <groupId>org.apache.calcite.avatica</groupId>
-            <artifactId>avatica</artifactId>
-            <version>1.26.0</version>
-        </dependency>
-        <!-- Avatica -->
-        <dependency>
-            <groupId>org.apache.calcite.avatica</groupId>
             <artifactId>avatica-server</artifactId>
-            <version>1.26.0</version>
+            <version>1.24.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.calcite.avatica</groupId>
             <artifactId>avatica-core</artifactId>
-            <version>1.26.0</version> <!-- или версия, с которой ты работаешь -->
+            <version>1.24.0</version>
         </dependency>
-        <!-- Jetty 9 (совместим с javax.servlet) -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
-            <version>9.4.52.v20230823</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
-            <version>9.4.52.v20230823</version>
         </dependency>
         <dependency>
             <groupId>javax.servlet</groupId>
